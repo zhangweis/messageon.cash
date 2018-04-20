@@ -19,7 +19,10 @@ No messages.
       </q-item-side>
         <q-item-main>
           <q-item-tile label>
-{{(names[message.tx.vin[0].addr]||{}).body||message.tx.vin[0].addr}}</q-item-tile>
+        <router-link :to="{ name: 'messages', params: { idOrName: message.tx.vin[0].addr}}">
+{{(names[message.tx.vin[0].addr]||{}).body||message.tx.vin[0].addr}}
+</router-link>
+</q-item-tile>
           <q-item-tile sublabel lines="2">
  <a :href="'https://bch-insight.bitpay.com/#/tx/'+message.tx.txid">
     {{message.tx.time|datetime}}
@@ -53,6 +56,8 @@ import blockchain from '../services/blockchain';
 import transactionEncoder from '../services/encoder';
 import messageStore from '../services/messagestore';
 import Compose from 'components/compose';
+import * as lodash from 'lodash';
+import {Notify} from 'quasar';
 export default {
   name: 'PageMessages',
   components: {
@@ -68,7 +73,12 @@ export default {
     return {
       names: {},
       messages: [],
-      isSelf: keystore.getAddress()==this.$route.params.idOrName
+      isSelf: false
+    }
+  },
+  watch: {
+    $route(to, from) {
+      this.test();
     }
   },
   async mounted() {
@@ -76,25 +86,36 @@ export default {
   },
   methods: {
 		async test() {
-
+      this.isSelf= keystore.getAddress()==this.$route.params.idOrName
+      this.messages = [];
     console.log(await messageStore.getFollowings(keystore.getAddress()));
     var address = this.$route.params.idOrName||keystore.getAddress();
       this.messages = await messageStore.getMessages(address);
-      this.names = {};
-      this.names[keystore.getAddress()] = await messageStore.getName(keystore.getAddress());
       if (address == keystore.getAddress()) {
         var followings = await messageStore.getFollowings(keystore.getAddress());
         for (var following of followings) {
-          this.names[following] = await messageStore.getName(following);
           this.messages = this.messages.concat(await messageStore.getMessages(following));
         }
       }
       this.messages.sort((m1, m2)=>m2.tx.time-m1.tx.time);
-      console.log(this.messages);
+      var addresses = lodash.uniq(lodash.map(this.messages, m=>m.tx.vin[0].addr));
+      for (var following of addresses) {
+        this.names[following] = await messageStore.getName(following);
+      }
+      console.log(this.messages, this.names);
       
     },
     async follow() {
-      console.log((await messageStore.follow(this.$route.params.idOrName)).toString());
+      try {
+      var transaction = await messageStore.follow(this.$route.params.idOrName);
+      console.log(transaction.toString());
+      var result = await blockchain.broadcast(transaction);
+
+      Notify.create({message:'Followed', type:'positive'})
+      }catch(e) {
+console.trace(e);
+      Notify.create({message:e, type:'negative'});
+      }
     }
   }
 }

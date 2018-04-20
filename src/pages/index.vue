@@ -1,14 +1,6 @@
 <template>
   <q-page class="flex flex-center">
-<q-list>
-    <q-item v-for='message of messages' :key="message.tx.txid">
-     {{message.tx.vin[0].addr}} | {{message.tx.time|datetime}}<br/>
-     {{message.body}} 
-    </q-item>
-</q-list>
-    <br/>
-    <button @click='test'>Test</button>
-    <button @click='sendMessage'>Post</button>
+    Redirecting...
   </q-page>
 </template>
 
@@ -16,17 +8,16 @@
 </style>
 
 <script>
-import {PrivateKey, Transaction, Script, PublicKey, Output, Opcode, Address} from 'bitcore-lib-cash';
-import keystore from '../services/keystore';
-import blockchain from '../services/blockchain';
-import transactionEncoder from '../services/encoder';
-import messageStore from '../services/messagestore';
+import keyStore from '../services/keystore';
 export default {
   name: 'PageIndex',
   data(){
     return {
       messages: []
     }
+  },
+  mounted() {
+    this.$router.push({ name: 'messages', params: { idOrName: keyStore.getAddress() }});
   },
   methods: {
     async sendMessage() {

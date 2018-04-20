@@ -65,6 +65,8 @@ console.log(new Address(transaction.outputs[2].script.toScriptHashOut()).toCashA
 	}
 	async follow(address) {
 		var publicKey = keystore.getPrivateKey().toPublicKey();
+    var followings = this.getFollowings(keystore.getAddress());
+    if (followings.indexOf(address)>=0) throw 'You are already a follower';
 		console.log(this.getFollowingAddress(publicKey))
 		return this.generateMessageTransaction({hexString:'',publicKey:await this.getPublicKeyOfAddress(address), additionsScripts:[transactionEncoder.encodeHexString(publicKey, Commands.follow)]});
 	}

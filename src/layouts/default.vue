@@ -53,7 +53,7 @@ Balance: {{addressObj.balance}}
         <router-link :to="{ name: 'messages', params: { idOrName: address}}">Messages</router-link>
         </q-item>
         <q-item>
-        <router-link :to="{ name: 'index'}">Home</router-link>
+        <router-link :to="{ name: 'messages', params: { idOrName: 'qqzjnawyl69axz673vmt2fqwrsqtlxa3acxp3m4du5'}}">Developer</router-link>
         </q-item>
         <q-item>
         <a @click='setName'>Set Name</a>
@@ -102,10 +102,21 @@ export default {
    methods: {
     openURL,
     async setName() {
+      try {
       var name = prompt('Name');
       if (!name) return;
       var transaction = await messageStore.setName(name);
       console.log(transaction.toString());
+      var result = await blockchain.broadcast(transaction);
+      Notify.create({
+        message:'Sent to blockchain',
+        type:'positive'
+      });
+    } catch (e) {
+      Notify.create({message:e,
+        type: 'negative',
+      });
+    }
     },
     async getName() {
       console.log(await messageStore.getName(keyStore.getAddress()));

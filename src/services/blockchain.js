@@ -22,8 +22,8 @@ class Blockchain {
     return await (await fetch(`https://bch-insight.bitpay.com/api/tx/${txid}`)).json();
   }
   async broadcast(transaction) {
-		console.log('broadcasting ', transaction.toString());
-		return {};
+//		console.log('broadcasting ', transaction.toString());
+//		return {};
     var res = await fetch(`https://bch-insight.bitpay.com/api/tx/send`, {
       body: JSON.stringify({rawtx:transaction.toString()}),
       method: 'POST',

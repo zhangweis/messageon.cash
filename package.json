@@ -7,7 +7,7 @@
   "author": "cdzhangw@gmail.com",
   "private": true,
   "scripts": {
-    "deploy": "push-dir --dir=dist/pwa-mat --remote=gh-pages --branch=master",
+    "deploy": "push-dir --dir=dist/spa-mat --remote=gh-pages --branch=master",
     "test": "echo \"No test specified\" && exit 0"
   },
   "dependencies": {

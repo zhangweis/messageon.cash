@@ -17,6 +17,7 @@
     "bitcore-lib-cash": "github:bitpay/bitcore-lib#cash",
     "bs58": "^4.0.1",
     "buffer-compare": "^1.1.1",
+    "delay": "^2.0.0",
     "force-array": "^3.1.0",
     "moment": "^2.22.1",
     "pad": "^2.0.3",

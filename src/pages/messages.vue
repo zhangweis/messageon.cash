@@ -4,7 +4,7 @@
   <q-toolbar-title>
    Messages 
   </q-toolbar-title>
-  <q-btn label="Refresh" @click="test"/>
+  <q-btn label="Refresh" @click="loadMessages"/>
   <q-btn label="Follow" @click="follow" v-if='!isSelf'/>
 </q-toolbar>
 <q-card>
@@ -78,14 +78,14 @@ export default {
   },
   watch: {
     $route(to, from) {
-      this.test();
+      this.loadMessages();
     }
   },
   async mounted() {
-    this.test();
+    this.loadMessages();
   },
   methods: {
-		async test() {
+		async loadMessages() {
       this.isSelf= keystore.getAddress()==this.$route.params.idOrName
       this.messages = [];
     console.log(await messageStore.getFollowings(keystore.getAddress()));
@@ -100,10 +100,9 @@ export default {
       this.messages.sort((m1, m2)=>m2.tx.time-m1.tx.time);
       var addresses = lodash.uniq(lodash.map(this.messages, m=>m.tx.vin[0].addr));
       for (var following of addresses) {
-        this.names[following] = await messageStore.getName(following);
+        this.$set(this.names,following, await messageStore.getName(following));
       }
       console.log(this.messages, this.names);
-      
     },
     async follow() {
       try {

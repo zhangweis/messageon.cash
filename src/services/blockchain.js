@@ -2,6 +2,11 @@ import {PrivateKey, Transaction, Script, PublicKey, Output, Opcode} from 'bitcor
 import * as pad from 'pad';
 import * as bitcore from 'bitcore-lib-cash';
 class Blockchain {
+	async getAddress(address) {
+    const res = await fetch(`https://bch-insight.bitpay.com/api/addr/${address}`);
+    let addrObj = await res.json();
+		return addrObj;
+	}
   async getUtxos(address) {
     const utxo_res = await fetch(`https://bch-insight.bitpay.com/api/addr/${address}/utxo`);
     let utxos = await utxo_res.json();

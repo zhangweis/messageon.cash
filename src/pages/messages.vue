@@ -10,6 +10,9 @@
 <q-card>
   <compose/>
 </q-card>
+<q-card v-if='messages.length==0'>
+No messages.
+</q-card>
 <q-card class="q-ma-sm" v-for='message of messages' :key="message.tx.txid">
     <q-item multiline>
       <q-item-side avatar="statics/boy-avatar.png">

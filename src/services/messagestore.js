@@ -88,6 +88,7 @@ console.log(new Address(transaction.outputs[2].script.toScriptHashOut()).toCashA
   async getMessages(address) {
     var utxos = await blockchain.getUtxos(address);
 		//todo check which utxo to use when multiple utxos exist.
+		if (utxos.length==0) return [];
     var tx = await blockchain.getTx(utxos[0].txid);
     return await this.getMessagesFromTx(address, tx, 10);
   }

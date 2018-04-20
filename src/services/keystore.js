@@ -2,7 +2,15 @@ import {PrivateKey, Transaction, Script, PublicKey, Output, Opcode, Address} fro
 import * as pad from 'pad';
 import * as bitcore from 'bitcore-lib-cash';
 class Keystore {
-  _getPrivateKey() {
+	generateKey() {
+		return PrivateKey.fromRandom();
+	}
+	saveKey(key) {
+		localStorage.privateKey = key;
+		delete this.privateKey;
+	}
+	_getPrivateKey() {
+		if (!localStorage.privateKey) return undefined;
     return new PrivateKey(localStorage.privateKey);//'5KE6oYzqN79hVXYD8zAQZFMt8rMGrDF68TX2nSB5C6tGKb9oJQM');
   }
   getPrivateKey() {

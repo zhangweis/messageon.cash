@@ -57,7 +57,8 @@ module.exports = function (ctx) {
 				'QCardActions',
 				'QItemTile',
 				'QInput',
-				'QRating',
+				'QCollapsible',
+				'QAlert',
         'QItemMain',
         'QItemSide'
       ],

@@ -8,7 +8,8 @@
       >
         <q-toolbar-title>
           MessageOn Bitcoin Cash
-          <div slot="subtitle">{{address}}</div>
+          <div slot="subtitle">
+</div>
         </q-toolbar-title>
         <q-btn
           flat
@@ -33,7 +34,21 @@ side="right"
         link
         inset-delimiter
       >
-        <q-list-header>Essential Links</q-list-header>
+        <q-list-header>Menu</q-list-header>
+<q-collapsible
+        v-model='opened'
+        icon="perm_identity"
+      >
+<q-alert type='warning' class="q-mb-sm" v-if='addressObj&&addressObj.balance<=0'>
+  Balance needed to do operations like post message, set name,...etc. Normally 0.001 BCH is enough.
+</q-alert>
+        <div><v-qrcode :value='address'/></div>
+<q-item>
+Balance: {{addressObj.balance}}
+</q-item>
+<a target="_blank" style="word-wrap: break-word;" :href="'https://explorer.bitcoin.com/bch/address/'+address">{{address}}</a>
+      </q-collapsible>
+
         <q-item>
         <router-link :to="{ name: 'messages', params: { idOrName: address}}">Messages</router-link>
         </q-item>
@@ -60,18 +75,29 @@ side="right"
 import { openURL } from 'quasar'
 import keyStore from '../services/keystore'
 import messageStore from '../services/messagestore'
+import blockchain from '../services/blockchain'
+import VQrcode from 'v-qrcode'
 
 export default {
   name: 'LayoutDefault',
+  components:{
+    VQrcode
+  },
   data () {
     return {
       leftDrawerOpen: this.$q.platform.is.desktop,
-      address: ''
+      address: '',
+      opened: false,
+      addressObj: {}
     }
   },
-    mounted() {
+    async mounted() {
+      if (!keyStore.getPrivateKey()) {
+        this.$router.push({name:'create'});
+      }
       this.address = keyStore.getAddress();
-console.log(this.address);
+      this.addressObj = (await blockchain.getAddress(this.address));
+      this.opened = this.addressObj.balance<=0;
     },
    methods: {
     openURL,

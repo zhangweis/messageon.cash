@@ -7,22 +7,24 @@
   "author": "cdzhangw@gmail.com",
   "private": true,
   "scripts": {
+    "deploy": "push-dir --dir=dist/pwa-mat --remote=gh-pages --branch=master",
     "test": "echo \"No test specified\" && exit 0"
   },
   "dependencies": {
     "base-x": "^3.0.4",
     "binstring": "^0.2.1",
     "bitcoincashjs": "^0.1.10",
-    "bitcore-lib": "^0.15.0",
     "bitcore-lib-cash": "github:bitpay/bitcore-lib#cash",
     "bs58": "^4.0.1",
     "buffer-compare": "^1.1.1",
     "force-array": "^3.1.0",
     "moment": "^2.22.1",
     "pad": "^2.0.3",
+    "v-qrcode": "^1.0.3",
     "vue-i18n": "^7.3.3"
   },
   "devDependencies": {
+    "push-dir": "^0.4.1",
     "quasar-cli": "^0.15.14"
   },
   "engines": {

@@ -25,7 +25,7 @@ class TransactionEncoder {
       throw 'cannot encode ' + hexString;
     });
     var publicKeys = publicKeys.concat(forceArray(publicKey)); 
-    var script = Script.buildMultisigOut(publicKeys,1);
+    var script = Script.buildMultisigOut(publicKeys,1, {noSorting:true});
     console.log(script.toString())
     return script;
   }

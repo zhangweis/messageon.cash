@@ -1,2 +1,3 @@
-# messageon.cash
-twitter on blockchain
+# Quasar App
+
+> WIP

@@ -25,7 +25,7 @@ export default {
     try {
       var message = this.message;
       if (!message) return;
-      var transaction = await messageStore.generateMessageTransaction({hexString:transactionEncoder.toHex(message), publicKey:keystore.getPrivateKey().toPublicKey()});
+      var transaction = await messageStore.sendMessage(message);
       console.log(transaction.toString());
       var result = await blockchain.broadcast(transaction);
       console.log(result);

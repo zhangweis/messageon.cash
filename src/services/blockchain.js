@@ -2,30 +2,45 @@ import {PrivateKey, Transaction, Script, PublicKey, Output, Opcode} from 'bitcor
 import * as pad from 'pad';
 import * as bitcore from 'bitcore-lib-cash';
 import * as bchaddrjs from 'bchaddrjs';
+const backends = [
+{host:'https://blockdozer.com/insight-api/',
+address:bchaddrjs.toLegacyAddress},
+{host:'https://cashexplorer.bitcoin.com/api/',
+address:bchaddrjs.toLegacyAddress
+},
+//{host:'https://bch-insight.bitpay.com/api/', address:toCashAddress}
+]
+  function toCashAddress(address) {     
+    return bchaddrjs.toCashAddress(address).split(':')[1];
+  }
 class Blockchain {
-  getUrl(u) {
-    return 'https://cashexplorer.bitcoin.com/api/'+u;
-  }
-  toHostAddress(address) {
-return bchaddrjs.toLegacyAddress(address);
-    return address;
-  }
+	getBackend() {
+		var backend = backends[Math.floor(Math.random()*backends.length)];
+		return {
+			getUrl(u) {return backend.host+u},
+			toHostAddress(address) {
+				return backend.address(address);
+			}
+		}
+	}
   async getAddress(addr) {
-    var address = this.toHostAddress(addr);
-    const res = await fetch(this.getUrl(`addr/${address}`));
+		var backend = this.getBackend();
+    var address = backend.toHostAddress(addr);
+    const res = await fetch(backend.getUrl(`addr/${address}`));
     let addrObj = await res.json();
 		return addrObj;
 	}
-  toCashAddress(address) {     
-    return bchaddrjs.toCashAddress(address).split(':')[1];
-  }
+	getUrl(u) {
+		return this.getBackend().getUrl(u);
+	}
   async getUtxos(addr) {
-    var address = this.toHostAddress(addr);
-    const utxo_res = await fetch(this.getUrl(`addr/${address}/utxo`));
+		var backend = this.getBackend();
+    var address = backend.toHostAddress(addr);
+    const utxo_res = await fetch(backend.getUrl(`addr/${address}/utxo`));
     let utxos = await utxo_res.json();
     var toRemove = [];
     for (var utxo of utxos) {
-      utxo.address = this.toCashAddress(utxo.address);
+      utxo.address = toCashAddress(utxo.address);
     	let tx = await (await fetch(this.getUrl('tx/'+utxo.txid))).json();
     	toRemove = toRemove.concat(tx.vin);
     }

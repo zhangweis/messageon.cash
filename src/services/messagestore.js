@@ -2,9 +2,11 @@ import {HDPublicKey, Address,Opcode, Script, PublicKey, Transaction, crypto} fro
 import keystore from '../services/keystore';
 import blockchain from '../services/blockchain';
 import transactionEncoder from '../services/encoder';
+import * as lodash from 'lodash';
 const Commands = {
-	set_name: transactionEncoder.toHex('//set_name'),
-	follow: transactionEncoder.toHex('//follow')
+  messages: 'messages',
+  set_name: 'set_name',
+	follow: 'follow'
 }
 class MessageStore {
 	nameKey() {
@@ -15,25 +17,21 @@ class MessageStore {
 	async setName(name) {
 		var hexString = transactionEncoder.toHex(name);
 		var myPublicKey = keystore.getPrivateKey().toPublicKey();
-		var hashed = crypto.Hash.sha256ripemd160(Buffer.from(hexString,'hex'));
-		var slot = hashed.readUIntLE(0, 4) && 0x7fffffff;
-		console.log(slot);
 		var publicKey = this.nameKey();
 		console.log(publicKey.toAddress().toCashAddress(true));
-		//todo check whether name taken
-		var transaction = await this.generateMessageTransaction({hexString, publicKey, additionsScripts:[Script.buildPublicKeyHashOut(publicKey), transactionEncoder.encodeHexString([myPublicKey], Commands.set_name).toScriptHashOut()]});
-		var address = new Address(transaction.outputs[0].script.toScriptHashOut());
+		//todo check whether name is taken
+		var address = new Address(transactionEncoder.sendToTopicScriptHashOut(publicKey,'names'));
 console.log(address.toCashAddress(true));
-
-console.log(new Address(transaction.outputs[2].script.toScriptHashOut()).toCashAddress(true));
 
 		var utxos = await blockchain.getUtxos(address.toCashAddress(true));
 		if (utxos.length>0) throw 'name is taken';
+		var transaction = await this.txFromScripts(transactionEncoder.sendToTopicScripts(publicKey, 'names', hexString).concat(transactionEncoder.sendToTopicScriptHashOut(myPublicKey, Commands.set_name)));
 		return transaction;
 	}
 	async getName(addr) {
-		var publicKey = await this.getPublicKeyOfAddress(addr);
-		var address = new Address(transactionEncoder.encodeHexString([publicKey], Commands.set_name).toScriptHashOut()).toCashAddress(true);
+console.log('getName:',addr);
+    var publicKey = await this.getPublicKeyOfAddress(addr);
+		var address = new Address(transactionEncoder.sendToTopicScriptHashOut(publicKey, Commands.set_name)).toCashAddress(true);
 		var utxos = await blockchain.getUtxos(address);
 		var names = [];
 		for (var utxo of utxos) {
@@ -53,48 +51,62 @@ console.log(new Address(transaction.outputs[2].script.toScriptHashOut()).toCashA
 		for (var utxo of utxos) {
 			var tx = await blockchain.getTx(utxo.txid);
 			var script = Script.fromHex(tx.vout[0].scriptPubKey.hex);
-			var publicKey = new PublicKey(script.chunks[1].buf);
-			var address = new Address(publicKey).toCashAddress(true);
+      if (!script.isDataOut()) continue;
+			var address = new Address(script.chunks[1].buf).toCashAddress(true);
 			addresses.push(address);
 		}
 		return addresses;
 	}
 	getFollowingAddress(publicKey) {
-		var script = transactionEncoder.encodeHexString([publicKey], Commands.follow);
-		return Address.fromScriptHash(crypto.Hash.sha256ripemd160(script.toBuffer())).toCashAddress(true);
+		var script = transactionEncoder.sendToTopicScriptHashOut(publicKey, Commands.follow);
+		return new Address(script).toCashAddress(true);
 	}
 	async follow(address) {
 		var publicKey = keystore.getPrivateKey().toPublicKey();
     var followings = await this.getFollowings(keystore.getAddress());
     if (followings.indexOf(address)>=0) throw 'You are already a follower';
 		console.log(this.getFollowingAddress(publicKey))
-		return this.generateMessageTransaction({hexString:'',publicKey:await this.getPublicKeyOfAddress(address), additionsScripts:[transactionEncoder.encodeHexString(publicKey, Commands.follow)]});
+		return await this.txFromScripts([Script.buildDataOut(new Address(address).toBuffer()), transactionEncoder.sendToTopicScriptHashOut(await this.getPublicKeyOfAddress(address),'followers'), transactionEncoder.sendToTopicScriptHashOut(publicKey, Commands.follow)]);
 	}
-	async generateMessageTransaction({hexString, publicKey, additionsScripts}) {
-    const privateKey = keystore.getPrivateKey()
+  async sendMessage(message) {
+    console.log('sendMessage');
+console.log(1, transactionEncoder.sendToTopicScripts(keystore.getPrivateKey().toPublicKey(), Commands.messages, transactionEncoder.toHex(message)));
+console.log(2, transactionEncoder.toHex(message));
+    return await this.txFromScripts(transactionEncoder.sendToTopicScripts(keystore.getPrivateKey().toPublicKey(), Commands.messages, transactionEncoder.toHex(message)));
+  }
+  async txFromScripts(outputScripts) {
     var address = keystore.getAddress();
     var utxos = await blockchain.getUtxos(address);
-    var script1 = transactionEncoder.encodeHexString(publicKey, hexString);
-		var outputScripts = [script1].concat(additionsScripts||[]);
     const transaction = new Transaction()
     	.feePerKb(1024)
       .from(utxos);
 			for (var script of outputScripts) {
-				transaction.addOutput(Transaction.Output.fromObject({satoshis: 900, script:script}));
+console.log('script:', script.toString(), script.getAddressInfo()&&new Address(script).toCashAddress(true));
+
+				transaction.addOutput(Transaction.Output.fromObject({satoshis: script.isDataOut()?0:546, script:script}));
 			}
 		transaction
     	.change(address)
-      .sign(privateKey);
+      .sign(keystore.getPrivateKey());
     return transaction;
   }
   async getMessages(address) {
-    var utxos = await blockchain.getUtxos(address);
+    var publicKey = await this.getPublicKeyOfAddress(address);
+    if (!publicKey) return [];
+    console.log(publicKey.toString());
+    var messageAddress = new Address(transactionEncoder.sendToTopicScriptHashOut(publicKey, Commands.messages)).toCashAddress(true);
+    console.log('messageAddress:',messageAddress);
+    var utxos = await blockchain.getUtxos(messageAddress);
 		//todo check which utxo to use when multiple utxos exist.
-		if (utxos.length==0) return [];
-    var tx = await blockchain.getTx(utxos[0].txid);
-    return await this.getMessagesFromTx(address, tx, 10);
+    var ret = [];
+    for (var utxo of utxos) {
+      var tx = await blockchain.getTx(utxo.txid);
+      ret = ret.concat(await this.extractMessagesFromTx(null, tx));
+    }
+    return ret;
   }
-	async getPublicKeyOfAddress(address) {
+	async getPublicKeyOfAddress(addr) {
+    var address = transactionEncoder.toCashAddress(addr);
 		if (keystore.getAddress()==address) return keystore.getPrivateKey().toPublicKey();
 		var utxos = await blockchain.getUtxos(address);
 		for (var utxo of utxos) {
@@ -120,32 +132,12 @@ console.log(new Address(transaction.outputs[2].script.toScriptHashOut()).toCashA
   }
 	extractMessagesFromTx(address, tx) {
     var messageScripts = tx.vout.map(o=>{return {tx:tx, script:Script.fromHex(o.scriptPubKey.hex)}})
-      .filter(({script})=>{
-				if (script.chunks.length<5) return;
-        if (script.chunks[0].opcodenum!=Opcode.OP_1) return;
-				if (script.chunks[1].buf.equals(script.chunks[2].buf)) return;
-				if (address&&new Address(new PublicKey(script.chunks[script.chunks.length-3].buf)).toCashAddress(true)!=address) return;
-        if (script.chunks[script.chunks.length-2].opcodenum!=Opcode.OP_1+script.chunks.length-4) return;
-        if (script.chunks[script.chunks.length-1].opcodenum!=Opcode.OP_CHECKMULTISIG) return;
-        return true;
-      });
-    var messages = messageScripts.map((message)=> {
-      var bufs = message.script.chunks.slice(1,message.script.chunks.length-3).map(chunk=>{
-				var buf = chunk.buf.slice(2);
-      if (buf[buf.length-1]==0) {
-        var index;
-        for (index=buf.length-1;index>=0;index--) {
-          if (buf[index]!=0) break;
-        }
-        buf = buf.slice(0, index+1);
-      }
-			return buf;
-			});
-			var buf = Buffer.concat(bufs);
-      return Object.assign({body:buf.toString('utf8')}, message);
+      .filter(({script})=>script.isDataOut());
+    var bufs = messageScripts.map((message)=> {
+      return message.script.getData();
     });
-		messages = messages.filter(message=>message.body.slice(0,2)!='//');
-		return messages;
+		var buf = Buffer.concat(bufs);
+    return [Object.assign({body:buf.toString('utf8')}, {tx:tx})];
 	}
 }
 

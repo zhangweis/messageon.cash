@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "base-x": "^3.0.4",
+    "bchaddrjs": "^0.2.1",
     "binstring": "^0.2.1",
     "bitcoincashjs": "^0.1.10",
     "bitcore-lib-cash": "github:bitpay/bitcore-lib#cash",

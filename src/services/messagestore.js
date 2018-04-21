@@ -23,9 +23,11 @@ class MessageStore {
 		var address = new Address(transactionEncoder.sendToTopicScriptHashOut(publicKey,'names'));
 console.log(address.toCashAddress(true));
 
-		var utxos = await blockchain.getUtxos(address.toCashAddress(true));
-		if (utxos.length>0) throw 'name is taken';
 		var transaction = await this.txFromScripts(transactionEncoder.sendToTopicScripts(publicKey, 'names', hexString).concat(transactionEncoder.sendToTopicScriptHashOut(myPublicKey, Commands.set_name)));
+		var nameAddress = new Address(transaction.outputs[0].script.toScriptHashOut()).toCashAddress(true);
+console.log(nameAddress);
+		var utxos = await blockchain.getUtxos(nameAddress);
+		if (utxos.length>0) throw 'name is taken';
 		return transaction;
 	}
 	async getName(addr) {
@@ -36,7 +38,7 @@ console.log('getName:',addr);
 		var names = [];
 		for (var utxo of utxos) {
 			var tx = await blockchain.getTx(utxo.txid);
-			var messages = this.extractMessagesFromTx(null, tx);
+			var messages = transactionEncoder.extractMessagesFromTx(null, tx);
 			names = names.concat(messages);
 		}
 		names.sort((n1,n2)=>n1.tx.time-n2.tx.time);
@@ -82,8 +84,10 @@ console.log(2, transactionEncoder.toHex(message));
       .from(utxos);
 			for (var script of outputScripts) {
 console.log('script:', script.toString(), script.getAddressInfo()&&new Address(script).toCashAddress(true));
-
-				transaction.addOutput(Transaction.Output.fromObject({satoshis: script.isDataOut()?0:546, script:script}));
+				var outValue = 546;
+				if (script.isDataOut()) outValue = 0;
+				if (script.chunks[script.chunks.length-1].opcodenum==Opcode.OP_CHECKMULTISIG) outValue=900;
+				transaction.addOutput(Transaction.Output.fromObject({satoshis: outValue, script:script}));
 			}
 		transaction
     	.change(address)
@@ -101,7 +105,7 @@ console.log('script:', script.toString(), script.getAddressInfo()&&new Address(s
     var ret = [];
     for (var utxo of utxos) {
       var tx = await blockchain.getTx(utxo.txid);
-      ret = ret.concat(await this.extractMessagesFromTx(null, tx));
+      ret = ret.concat(transactionEncoder.extractMessagesFromTx(null, tx));
     }
     return ret;
   }
@@ -127,18 +131,9 @@ console.log('script:', script.toString(), script.getAddressInfo()&&new Address(s
 	}
   async getMessagesFromTx(address, tx, depth=1) {
     if (tx.vin[0].addr!=address||depth<=0) return [];
-		var messages = this.extractMessagesFromTx(address, tx);
+		var messages = transactionEncoder.extractMessagesFromTx(address, tx);
 		return messages.concat(await this.getMessagesFromTx(address, await blockchain.getTx(tx.vin[0].txid), depth - 1));
   }
-	extractMessagesFromTx(address, tx) {
-    var messageScripts = tx.vout.map(o=>{return {tx:tx, script:Script.fromHex(o.scriptPubKey.hex)}})
-      .filter(({script})=>script.isDataOut());
-    var bufs = messageScripts.map((message)=> {
-      return message.script.getData();
-    });
-		var buf = Buffer.concat(bufs);
-    return [Object.assign({body:buf.toString('utf8')}, {tx:tx})];
-	}
 }
 
 export default new MessageStore();

@@ -17,16 +17,28 @@ class TransactionEncoder {
   encodeString(publicKey, string) {
     return this.sendToTopic(publicKey, this.toHex(string));
   }
-  sendToTopicScripts(adminPublicKey, topic, hexString) {
+	dataScripts(publicKey, hexString) {
+		return [this.sendToTopicOld(publicKey, hexString)];
+	}
+	opReturnScripts(publicKey, hexString) {
     if (hexString.length>80*2*3) throw 'message is too long';
-    var chunks = hexString.length==0?[]:hexString.match(/.{1,160}/g);
+    var chunks = hexString.length==0?[]:hexString.match(/.{1,140}/g);
     var dataouts = chunks.map(chunk=>{
       return Script.buildDataOut(chunk, 'hex');
     });
+		return dataouts;
+	}
+	sendToTopicScripts(adminPublicKey, topic, hexString) {
+try{
+		var outs = this.dataScripts(adminPublicKey, hexString);
     console.log('adminPublicKey:', adminPublicKey.toString());
     var hashOutScript = this.sendToTopicScriptHashOut(adminPublicKey, topic);
 
-    return dataouts.concat([hashOutScript]);
+    return outs.concat([hashOutScript]);
+}catch(e) {
+console.trace(e);
+throw e;
+}
   }
   _sendToTopicScript(adminPublicKey, topic) {
     var dataAndDrop = Script()
@@ -58,6 +70,45 @@ class TransactionEncoder {
     console.log(script.toString())
     return script;
   }
+	extractMessagesFromTxOpReturn(address, tx) {
+    var messageScripts = tx.vout.map(o=>{return {tx:tx, script:Script.fromHex(o.scriptPubKey.hex)}})
+      .filter(({script})=>script.isDataOut());
+    var bufs = messageScripts.map((message)=> {
+      return message.script.getData();
+    });
+		var buf = Buffer.concat(bufs);
+    return [Object.assign({body:buf.toString('utf8')}, {tx:tx})];
+	}
+	extractMessagesFromTx(address, tx) {
+    var messageScripts = tx.vout.map(o=>{return {tx:tx, script:Script.fromHex(o.scriptPubKey.hex)}})
+      .filter(({script})=>{
+				if (script.chunks.length<5) return;
+        if (script.chunks[0].opcodenum!=Opcode.OP_1) return;
+				if (script.chunks[1].buf.equals(script.chunks[2].buf)) return;
+				if (address&&new Address(new PublicKey(script.chunks[script.chunks.length-3].buf)).toCashAddress(true)!=address) return;
+        if (script.chunks[script.chunks.length-2].opcodenum!=Opcode.OP_1+script.chunks.length-4) return;
+        if (script.chunks[script.chunks.length-1].opcodenum!=Opcode.OP_CHECKMULTISIG) return;
+        return true;
+      });
+    var messages = messageScripts.map((message)=> {
+      var bufs = message.script.chunks.slice(1,message.script.chunks.length-3).map(chunk=>{
+				var buf = chunk.buf.slice(2);
+      if (buf[buf.length-1]==0) {
+        var index;
+        for (index=buf.length-1;index>=0;index--) {
+          if (buf[index]!=0) break;
+        }
+        buf = buf.slice(0, index+1);
+      }
+			return buf;
+			});
+			var buf = Buffer.concat(bufs);
+      return Object.assign({body:buf.toString('utf8')}, message);
+    });
+		messages = messages.filter(message=>message.body.slice(0,2)!='//');
+		return messages;
+	}
+
 }
 
 export default new TransactionEncoder();

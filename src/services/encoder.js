@@ -19,7 +19,7 @@ class TransactionEncoder {
     encoded = pad(encoded, 66, '0');
     console.log(encoded);
           try {
-      return new PublicKey(encoded);
+      return new PublicKey(encoded)//PublicKey.fromPoint(new PublicKey(encoded).point, false);
         }catch(e){}
       }
       throw 'cannot encode ' + hexString;

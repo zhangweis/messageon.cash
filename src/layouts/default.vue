@@ -77,7 +77,7 @@ import keyStore from '../services/keystore'
 import messageStore from '../services/messagestore'
 import blockchain from '../services/blockchain'
 import VQrcode from 'v-qrcode'
-
+import {Notify} from 'quasar'
 export default {
   name: 'LayoutDefault',
   components:{

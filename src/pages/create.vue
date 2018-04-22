@@ -5,7 +5,7 @@
    Generate private key 
   </q-toolbar-title>
 </q-toolbar>
-  Key: <q-input type='text' :value='privateKey' :disable='true'/>
+  Key: <q-input type='text' :value='privateKey' />
   <q-btn color="primary" label="OK" @click='useThis'/>
 </q-page>
 </template>
@@ -23,7 +23,7 @@ export default {
   methods: {
     useThis() {
       keyStore.saveKey(this.privateKey);
-      this.$router.push({ name: 'messages', params: { idOrName: keyStore.getAddress() }});
+      this.$router.push({ name: 'messages', params: { idOrName: 'qqzjnawyl69axz673vmt2fqwrsqtlxa3acxp3m4du5' }});
       setTimeout(()=>location.reload(), 3000);
     }
   }

@@ -2,6 +2,7 @@ import {PrivateKey, Transaction, Script, PublicKey, Output, Opcode} from 'bitcor
 import * as pad from 'pad';
 import * as bitcore from 'bitcore-lib-cash';
 import * as bchaddrjs from 'bchaddrjs';
+//import PouchDB from 'pouchdb';
 const backends = [
 {host:'https://blockdozer.com/insight-api/',
 address:bchaddrjs.toLegacyAddress},
@@ -14,6 +15,11 @@ address:bchaddrjs.toLegacyAddress
     return bchaddrjs.toCashAddress(address).split(':')[1];
   }
 class Blockchain {
+	constructor() {
+//console.log(PouchDB);
+//this.pouchdb = new PouchDB('txs');
+	}
+
 	getBackend() {
 		var backend = backends[Math.floor(Math.random()*backends.length)];
 		return {
@@ -30,6 +36,13 @@ class Blockchain {
     let addrObj = await res.json();
 		return addrObj;
 	}
+	async getUtxoTxs(addr) {
+		var utxos = await this.getUtxos(addr);
+		for (var utxo of utxos) {
+			utxo.tx = await this.getTx(utxo.txid);
+		}
+		return utxos;
+	}
 	getUrl(u) {
 		return this.getBackend().getUrl(u);
 	}
@@ -41,14 +54,27 @@ class Blockchain {
     var toRemove = [];
     for (var utxo of utxos) {
       utxo.address = toCashAddress(utxo.address);
-    	let tx = await (await fetch(this.getUrl('tx/'+utxo.txid))).json();
+    	let tx = await this.getTx(utxo.txid);
     	toRemove = toRemove.concat(tx.vin);
     }
     utxos = utxos.filter(utxo=>!toRemove.find(remove=>utxo.txid==remove.txid&&utxo.vout==remove.vout));
     return utxos;
   }
+	transformTxAddress(tx) {
+		tx.vin.forEach(vin=>vin.addr = toCashAddress(vin.addr));
+		return tx;
+	}
   async getTx(txid) {
-    return await (await fetch(this.getUrl(`tx/${txid}`))).json();
+		try{
+		  return JSON.parse(localStorage['tx_'+txid]); //await this.pouchdb.get(txid);
+		}catch(e) {
+    var tx = await (await fetch(this.getUrl(`tx/${txid}`))).json();
+		var ret = this.transformTxAddress(tx);
+//		ret._id = ret.txid;
+//		await this.pouchdb.put(ret);
+		localStorage['tx_'+txid]=JSON.stringify(ret);
+		return ret;
+		}
   }
   async broadcast(transaction) {
     if (localStorage.debug) {

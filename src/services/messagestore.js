@@ -9,6 +9,9 @@ const Commands = {
 	follow: 'follow'
 }
 class MessageStore {
+	constructor() {
+		this.addressPublicKeys = {}
+	}
 	nameKey() {
 		var root = new HDPublicKey('xpub661MyMwAqRbcFqBHv8ewWjVkBtGKpbsWzVhmpyR536qK45jU1WDn7MyeFMNa8AfpzZmDAa6dnBMDa4uyRk5F9AKA7h24frodQe6P7PWy1iH');
 		var publicKey = new PublicKey(root.derive(0).publicKey);
@@ -76,6 +79,16 @@ console.log(1, transactionEncoder.sendToTopicScripts(keystore.getPrivateKey().to
 console.log(2, transactionEncoder.toHex(message));
     return await this.txFromScripts(transactionEncoder.sendToTopicScripts(keystore.getPrivateKey().toPublicKey(), Commands.messages, transactionEncoder.toHex(message)));
   }
+	async addComment(message, comment) {
+    return await this.txFromScripts(transactionEncoder.sendToTopicScripts(await this.getPublicKeyOfAddress(message.tx.vin[0].addr), message.tx.txid, transactionEncoder.toHex(comment)));
+	}
+	async loadComments(tx) {
+		var publicKey = await this.getPublicKeyOfAddress(tx.vin[0].addr);
+		var address = new Address(transactionEncoder.sendToTopicScriptHashOut(publicKey, tx.txid)).toCashAddress(true);
+		var utxos = await blockchain.getUtxoTxs(address);
+		var messages = lodash.flatten(utxos.map(utxo=>transactionEncoder.extractMessagesFromTx(null, utxo.tx)));
+		return messages;
+	}
   async txFromScripts(outputScripts) {
     var address = keystore.getAddress();
     var utxos = await blockchain.getUtxos(address);
@@ -111,6 +124,12 @@ console.log('script:', script.toString(), script.getAddressInfo()&&new Address(s
   }
 	async getPublicKeyOfAddress(addr) {
     var address = transactionEncoder.toCashAddress(addr);
+		if (!this.addressPublicKeys[address]) {
+			this.addressPublicKeys[address] = await this._getPublicKeyOfAddress(address);
+		}
+		return this.addressPublicKeys[address];
+	}
+	async _getPublicKeyOfAddress(address) {	
 		if (keystore.getAddress()==address) return keystore.getPrivateKey().toPublicKey();
 		var utxos = await blockchain.getUtxos(address);
 		for (var utxo of utxos) {

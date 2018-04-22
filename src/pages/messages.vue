@@ -13,35 +13,10 @@
 <q-card v-if='messages.length==0'>
 No messages.
 </q-card>
-<q-card class="q-ma-sm" v-for='message of messages' :key="message.tx.txid">
-    <q-item multiline>
-      <q-item-side avatar="statics/boy-avatar.png">
-      </q-item-side>
-        <q-item-main>
-          <q-item-tile label>
-        <router-link :to="{ name: 'messages', params: { idOrName: message.tx.vin[0].addr}}">
-{{(names[message.tx.vin[0].addr]||{}).body||message.tx.vin[0].addr}}
-</router-link>
-</q-item-tile>
-          <q-item-tile sublabel lines="2">
- <a :href="'https://bch-insight.bitpay.com/#/tx/'+message.tx.txid">
-    {{message.tx.time|datetime}}
-</a>
-
-</q-item-tile>
-        </q-item-main>
-    </q-item>
-    <q-item>
-      <q-card-title>
-        {{message.body}}
-      </q-card-title>
-      </q-item>
-      <q-card-actions align="around">
-        <q-btn flat color="faded" icon="fa-thumbs-up" label="Like"/>
-        <q-btn flat color="faded" icon="comment" label="Comment"></q-btn>
-        <q-btn flat color="primary" icon="share" />
-      </q-card-actions>
-</q-card>
+<div  v-for='message of messages' :key="message.tx.txid">
+<message :names='names' :message='message'>
+</message>
+</div>
     <br/>
   </q-page>
 </template>
@@ -56,12 +31,14 @@ import blockchain from '../services/blockchain';
 import transactionEncoder from '../services/encoder';
 import messageStore from '../services/messagestore';
 import Compose from 'components/compose';
+import Message from 'components/message';
 import * as lodash from 'lodash';
 import {Notify} from 'quasar';
 export default {
   name: 'PageMessages',
   components: {
-    Compose
+    Compose,
+		Message
   },
   filters:{
     isSetNameType(tx) {

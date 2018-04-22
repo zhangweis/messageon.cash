@@ -50,7 +50,8 @@ Balance: {{addressObj.balance}}
       </q-collapsible>
 
         <q-item>
-        <router-link :to="{ name: 'messages', params: { idOrName: address}}">Messages</router-link>
+        <router-link :to="{ name: 'messages', params: { idOrName: address}}">
+				My Home</router-link>
         </q-item>
         <q-item>
         <router-link :to="{ name: 'messages', params: { idOrName: 'qqzjnawyl69axz673vmt2fqwrsqtlxa3acxp3m4du5'}}">Developer</router-link>

@@ -62,6 +62,9 @@ class Blockchain {
         'content-type': 'application/json'
       }
     });
+		if (res.status >= 400) {
+			throw await res.text();
+		}
     return await res.json();
   }
 }

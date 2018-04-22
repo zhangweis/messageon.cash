@@ -18,7 +18,9 @@ class TransactionEncoder {
     return this.sendToTopic(publicKey, this.toHex(string));
   }
 	dataScripts(publicKey, hexString) {
-		return [this.sendToTopicOld(publicKey, hexString)];
+    if (hexString.length>31*2*6) throw 'message is too long';
+		var chunks = hexString.length==0?[]:hexString.match(/.{1,124}/g);
+		return chunks.map(chunk=>this.sendToTopicOld(publicKey, chunk));
 	}
 	opReturnScripts(publicKey, hexString) {
     if (hexString.length>80*2*3) throw 'message is too long';
@@ -52,7 +54,6 @@ throw e;
     return this._sendToTopicScript(publicKey, topic).toScriptHashOut();
   }
   sendToTopicOld(publicKey, hexString) {
-    if (hexString.length>30*2*6) throw 'message is too long';
     var chunks = hexString.length==0?[]:hexString.match(/.{1,62}/g);
     var publicKeys = chunks.map(chunk=>{
       for (var i = 0; i<256; i++) {
@@ -105,6 +106,9 @@ throw e;
 			var buf = Buffer.concat(bufs);
       return Object.assign({body:buf.toString('utf8')}, message);
     });
+
+		if (messages.length>0)
+		messages = [messages.reduce((accum, message)=>{accum.body=accum.body+message.body;return accum;}, Object.assign({}, messages[0],{body:''}))];
 		messages = messages.filter(message=>message.body.slice(0,2)!='//');
 		return messages;
 	}

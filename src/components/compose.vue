@@ -38,6 +38,7 @@ export default {
       });
       this.message = '';
     } catch (e) {
+console.trace(e)
       Notify.create({message:e,
         type: 'negative',
       });

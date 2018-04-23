@@ -17,6 +17,11 @@ export default {
       privateKey: ''
     }
   },
+	created() {
+		if (keyStore.getPrivateKey()) {
+      this.$router.push({name:'index'});
+    }
+	},
   mounted() {
     this.privateKey = keyStore.generateKey().toWIF();
   },

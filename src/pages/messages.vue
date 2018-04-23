@@ -29,13 +29,24 @@ import {PrivateKey, Transaction, Script, PublicKey, Output, Opcode, Address} fro
 import keystore from '../services/keystore';
 import blockchain from '../services/blockchain';
 import transactionEncoder from '../services/encoder';
-import messageStore from '../services/messagestore';
+import messageStore,{combineLatestOfAll} from '../services/messagestore';
 import Compose from 'components/compose';
 import Message from 'components/message';
 import * as lodash from 'lodash';
 import {Notify} from 'quasar';
+import {Observable} from 'rxjs';
 export default {
   name: 'PageMessages',
+	subscriptions() {
+		return {
+			messages: messageStore.messages$.merge(Observable.of([])),
+			isSelf: messageStore.address$.map(address=>keystore.getAddress()==address),
+			names: messageStore.messages$.switchMap(messages=>{
+      var addresses = lodash.uniq(lodash.map(messages, mess=>mess.tx.vin[0].addr));
+			return combineLatestOfAll(addresses.map(address=>messageStore.getName$(address)), (names, added)=>Object.assign(names,added), {});
+			}).merge(Observable.of({}))
+		};
+	},
   components: {
     Compose,
 		Message
@@ -48,9 +59,9 @@ export default {
   },
   data(){
     return {
-      names: {},
-      messages: [],
-      isSelf: false
+//      names: {},
+//      messages: [],
+//      isSelf: false
     }
   },
   watch: {
@@ -63,23 +74,8 @@ export default {
   },
   methods: {
 		async loadMessages() {
-      this.isSelf= keystore.getAddress()==this.$route.params.idOrName
-      this.messages = [];
-    console.log(await messageStore.getFollowings(keystore.getAddress()));
     var address = this.$route.params.idOrName||keystore.getAddress();
-      this.messages = await messageStore.getMessages(address);
-      if (address == keystore.getAddress()) {
-        var followings = await messageStore.getFollowings(keystore.getAddress());
-        for (var following of followings) {
-          this.messages = this.messages.concat(await messageStore.getMessages(following));
-        }
-      }
-      this.messages.sort((m1, m2)=>m2.tx.time-m1.tx.time);
-      var addresses = lodash.uniq(lodash.map(this.messages, m=>m.tx.vin[0].addr));
-      for (var following of addresses) {
-        this.$set(this.names,following, await messageStore.getName(following));
-      }
-      console.log(this.messages, this.names);
+		messageStore.address$.next(address);
     },
     async follow() {
       try {

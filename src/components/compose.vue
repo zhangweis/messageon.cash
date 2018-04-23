@@ -29,11 +29,8 @@ export default {
       console.log(transaction.toString());
       var result = await blockchain.broadcast(transaction);
       console.log(result);
-			setTimeout(async ()=>{
-      this.messages = await messageStore.getMessages(keystore.getAddress()); 
-			}, 10*1000);
       Notify.create({
-        message:'Sent to blockchain',
+        message:'Sent to blockchain, refresh in 30 seconds to show in list.',
         type:'positive'
       });
       this.message = '';

@@ -2,6 +2,8 @@ import {PrivateKey, Transaction, Script, PublicKey, Output, Opcode} from 'bitcor
 import * as pad from 'pad';
 import * as bitcore from 'bitcore-lib-cash';
 import * as bchaddrjs from 'bchaddrjs';
+import {Observable} from 'rxjs/Observable';
+import * as lodash from 'lodash';
 //import PouchDB from 'pouchdb';
 const backends = [
 {host:'https://blockdozer.com/insight-api/',
@@ -16,6 +18,7 @@ address:bchaddrjs.toLegacyAddress
   }
 class Blockchain {
 	constructor() {
+		this.utxoThrottles = {};
 //console.log(PouchDB);
 //this.pouchdb = new PouchDB('txs');
 	}
@@ -36,8 +39,25 @@ class Blockchain {
     let addrObj = await res.json();
 		return addrObj;
 	}
+	getUtxoTxs$(addr) {
+		return this.getUtxos$(addr).switchMap(utxos=>Observable.fromPromise(this._loadUtxoTxs(utxos)));
+	}
+	getUtxos$(addr) {
+		if (!this.utxoThrottles[addr]) 
+		this.utxoThrottles[addr]=
+		lodash.throttle((addr)=>{
+		var localStorageUtxos$ = Observable.empty();
+		try {
+			localStorageUtxos$ = Observable.of(JSON.parse(localStorage['utxos_'+addr]));
+		} catch(e) {}
+		return Observable.fromPromise(this.getUtxos(addr)).do(utxos=>localStorage['utxos_'+addr]=JSON.stringify(utxos)).merge(localStorageUtxos$);}, 10*1000, {trailing:false});
+		return this.utxoThrottles[addr](addr);
+	}
 	async getUtxoTxs(addr) {
 		var utxos = await this.getUtxos(addr);
+		return await this._loadUtxoTxs(utxos);
+	}
+	async _loadUtxoTxs(utxos) {
 		for (var utxo of utxos) {
 			utxo.tx = await this.getTx(utxo.txid);
 		}

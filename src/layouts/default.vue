@@ -120,7 +120,10 @@ export default {
     }
     },
     async getName() {
-      console.log(await messageStore.getName(keyStore.getAddress()));
+      messageStore.getName$(keyStore.getAddress()).last().subscribe((nameObj) => {
+				var name = nameObj[Object.keys(nameObj)[0]].body
+				Notify.create({message:`Your name is "${name}"`});
+			});
     }
  }
 }

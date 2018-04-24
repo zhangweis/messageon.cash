@@ -10,6 +10,12 @@
 <q-card>
   <compose/>
 </q-card>
+<q-item v-if='loading'>
+<q-card-title>
+<q-spinner />
+Loading...
+</q-card-title>
+</q-item>
 <q-card v-if='messages.length==0'>
 No messages.
 </q-card>
@@ -40,6 +46,7 @@ export default {
 	subscriptions() {
 		return {
 			messages: messageStore.messages$.merge(Observable.of([])),
+			loading: messageStore.messagesLoading$,
 			isSelf: messageStore.address$.map(address=>keystore.getAddress()==address),
 			names: messageStore.messages$.switchMap(messages=>{
       var addresses = lodash.uniq(lodash.map(messages, mess=>mess.tx.vin[0].addr));

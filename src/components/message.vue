@@ -1,5 +1,5 @@
 <template>
-  <single-message :message='message' :names='names'>
+  <single-message :message='message' :names='names||{}'>
       <q-card-actions align="around">
 				<div>
         <q-btn flat :color="(likes||{})[address]?'primary':'faded'" icon="fa-thumbs-up" label="Like" @click="toggleLike">
@@ -23,7 +23,7 @@
 <q-btn right label='Post Comment' @click='sendCommentMessage'/>
 </q-item>
         <div  v-for='comment of comments' :key="comment.tx.txid">
-        <single-message :message='comment' :names = 'names'>
+        <single-message :message='comment' :names = 'commentNames'>
         </single-message>
         </div>
       </q-list>
@@ -59,18 +59,22 @@ export default {
 	subscriptions() {
 		this.loadLikes$ = new Subject();
 		this.loadLikeNames$ = new Subject();
+		this.loadCommentNames$ = new Subject();
 		var likes$ = this.$watchAsObservable('message').merge(this.loadLikes$).switchMap(({newValue})=>{
 				return messageStore.loadLikes$(this.message.tx);
 			});
- 
-		return {
-			comments: this.$watchAsObservable('message').switchMap(({newValue})=>{
+		var comments$ = this.$watchAsObservable('message').switchMap(({newValue})=>{
 				return messageStore.loadComments$(newValue.tx);
-			}),
-			likes: likes$,
-			likeNames: likes$.combineLatest(this.loadLikeNames$).switchMap(([likes])=>{
+			});
+		var loadNames = ([likes])=>{
 				return combineLatestOfAll(lodash.values(likes).map(like=>messageStore.getName$(like.tx.vin[0].addr)), (acc,name)=>Object.assign(acc, name), {});
-			}).do((names)=>{if(Object.keys(names).length>0)console.log(2,names)})
+			};
+		return {
+			comments: comments$,
+			likes: likes$,
+			commentNames: comments$.combineLatest(this.loadCommentNames$).switchMap(loadNames),
+			likeNames: likes$.combineLatest(this.loadLikeNames$).switchMap(loadNames)
+			.do((names)=>{if(Object.keys(names).length>0)console.log(2,names)})
 		};
 	},
   data() {
@@ -104,6 +108,7 @@ console.log(transaction);
 		},
     async toggleComments() {
       this.commentOpen = !this.commentOpen;
+			if (this.commentOpen) this.loadCommentNames$.next();
 //      if (this.commentOpen/* && !this.comments*/) {
 //        this.comments = await messageStore.loadComments(this.message.tx);
 //console.log(this.comments);

@@ -3,7 +3,7 @@ import keystore from '../services/keystore';
 import blockchain from '../services/blockchain';
 import transactionEncoder from '../services/encoder';
 import * as lodash from 'lodash';
-import {Observable, ReplaySubject} from 'rxjs'
+import {Observable, ReplaySubject, Subject} from 'rxjs'
 const Commands = {
   messages: 'messages',
   set_name: 'set_name',
@@ -21,7 +21,16 @@ class MessageStore {
 			var observables = followings.map(following=>this.getMessages$(following));
 			return combineLatestOfAll(observables, (all, messagesFromOneFollowing)=>all.concat(messagesFromOneFollowing), []);
 			});
-		this.messages$ = followingMessages$.combineLatest(this.address$.switchMap(address=>this.getMessages$(address)), (fromFollowings, addressMessages)=>fromFollowings.concat(addressMessages));
+			var loadDone$ = new Subject();
+		this.messages$ = this.address$.switchMap(address=>{
+			var messages$ = this.getFollowings$(address).switchMap(followings=>{
+			var observables = followings.map(following=>this.getMessages$(following));
+			return combineLatestOfAll(observables, (all, messagesFromOneFollowing)=>all.concat(messagesFromOneFollowing), []);
+			}).combineLatest(this.getMessages$(address), (fromFollowings, addressMessages)=>fromFollowings.concat(addressMessages));
+			messages$.subscribe({complete:()=> loadDone$.next()});
+			return messages$;
+			});
+		this.messagesLoading$ = this.address$.mapTo('started').merge(loadDone$.mapTo('')); 
 	}
 	getPublicKeyOfAddress$(address) {
 		if (this.addressPublicKeys[address]) return Observable.of(this.addressPublicKeys[address]);

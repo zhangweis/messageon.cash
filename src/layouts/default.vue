@@ -37,7 +37,7 @@ side="right"
         <q-list-header>Menu</q-list-header>
 <q-collapsible
         v-model='opened'
-        icon="perm_identity"
+        icon="perm_identity" :label="'('+((name||{})[address]||{body:address}).body+')'"
       >
 <q-alert type='warning' class="q-mb-sm" v-if='addressObj&&addressObj.balance<=0'>
   Balance needed to do operations like post message, set name,...etc. Normally 0.001 BCH is enough.
@@ -84,6 +84,11 @@ export default {
   components:{
     VQrcode
   },
+	subscriptions() {
+		return {
+			name: messageStore.getName$(keyStore.getAddress())
+		};
+	},
   data () {
     return {
       leftDrawerOpen: this.$q.platform.is.desktop,

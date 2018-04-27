@@ -46,7 +46,12 @@ side="right"
 <q-item>
 Balance: {{addressObj.balance}}
 </q-item>
-<a target="_blank" style="word-wrap: break-word;" :href="'https://explorer.bitcoin.com/bch/address/'+address">{{address}}</a>
+<a target="_blank" style="word-wrap: break-word;" :href="'https://explorer.bitcoin.com/bch/address/'+address">{{address}}</a> 
+<br/>
+<a @click='toggleShowPrivateKey' onclick='return false' href='#'>Show Private Key</a>
+<q-item v-if='showPrivateKey'>
+{{privateKey}}
+</q-item>
       </q-collapsible>
 
         <q-item>
@@ -90,10 +95,16 @@ export default {
 		};
 	},
   data () {
+    var privateKey;
+    if (keyStore.getPrivateKey()) {
+      privateKey = keyStore.getPrivateKey().toWIF();
+    }
     return {
       leftDrawerOpen: this.$q.platform.is.desktop,
       address: '',
       opened: false,
+      showPrivateKey: false,
+      privateKey: privateKey,
       addressObj: {}
     }
   },
@@ -107,6 +118,9 @@ export default {
     },
    methods: {
     openURL,
+    toggleShowPrivateKey() {
+    this.showPrivateKey=!this.showPrivateKey
+    },
     async setName() {
       try {
       var name = prompt('Name');

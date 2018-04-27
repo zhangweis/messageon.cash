@@ -37,7 +37,7 @@ import keyStore from '../services/keystore';
 import blockchain from '../services/blockchain';
 import { Notify } from 'quasar'
 import notifyWith from '../services/notifywith'; 
-import {Subject} from 'rxjs';
+import {Subject} from 'rxjs/Subject';
 import * as lodash from 'lodash';
 import Person from 'components/person';
 import MessageSummary from './messagesummary';
@@ -74,7 +74,6 @@ export default {
 			likes: likes$,
 			commentNames: comments$.combineLatest(this.loadCommentNames$).switchMap(loadNames),
 			likeNames: likes$.combineLatest(this.loadLikeNames$).switchMap(loadNames)
-			.do((names)=>{if(Object.keys(names).length>0)console.log(2,names)})
 		};
 	},
   data() {
@@ -88,7 +87,6 @@ export default {
   },
   methods: {
 		loadLikeNames() {
-console.log('loadLikeNames', this.loadLikeNames$);
 			this.loadLikeNames$.next(1);
 		},
 		async toggleLike() {

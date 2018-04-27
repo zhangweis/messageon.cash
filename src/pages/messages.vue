@@ -40,15 +40,16 @@ import Compose from 'components/compose';
 import Message from 'components/message';
 import * as lodash from 'lodash';
 import {Notify} from 'quasar';
-import {Observable} from 'rxjs';
+import {Observable} from 'rxjs/Observable';
 export default {
   name: 'PageMessages',
 	subscriptions() {
+    var messages$ = messageStore.messages$.share();
 		return {
-			messages: messageStore.messages$.merge(Observable.of([])),
+			messages: messages$.merge(Observable.of([])),
 			loading: messageStore.messagesLoading$,
 			isSelf: messageStore.address$.map(address=>keystore.getAddress()==address),
-			names: messageStore.messages$.switchMap(messages=>{
+			names: messages$.switchMap(messages=>{
       var addresses = lodash.uniq(lodash.map(messages, mess=>mess.tx.vin[0].addr));
 			return combineLatestOfAll(addresses.map(address=>messageStore.getName$(address)), (names, added)=>Object.assign(names,added), {});
 			}).merge(Observable.of({}))

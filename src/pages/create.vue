@@ -11,6 +11,7 @@
 </template>
 <script>
 import keyStore from '../services/keystore';
+import {Loading} from 'quasar';
 export default {
   data() {
     return {
@@ -27,6 +28,7 @@ export default {
   },
   methods: {
     useThis() {
+      Loading.show();
       keyStore.saveKey(this.privateKey);
       this.$router.push({ name: 'messages', params: { idOrName: 'qqzjnawyl69axz673vmt2fqwrsqtlxa3acxp3m4du5' }});
       setTimeout(()=>location.reload(), 3000);

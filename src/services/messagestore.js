@@ -3,38 +3,42 @@ import keystore from '../services/keystore';
 import blockchain from '../services/blockchain';
 import transactionEncoder from '../services/encoder';
 import * as lodash from 'lodash';
-import {Observable, ReplaySubject, Subject} from 'rxjs'
+import {Observable} from 'rxjs/Observable'
+import {ReplaySubject} from 'rxjs'
+import {Subject} from 'rxjs/Subject'
 const Commands = {
   messages: 'messages',
   set_name: 'set_name',
 	follow: 'follow'
 }
 function combineLatestOfAll(observables, projector, seed) {
-			return observables.reduce((combined,observable)=>combined.combineLatest(observable,projector), Observable.of(seed));
+//			return observables.reduce((combined,observable)=>combined.combineLatest(observable,projector), Observable.of(seed));
+        var lastOnes = observables.map(o=>o.last());
+        return Observable.zip(...observables).take(1).merge(Observable.zip(...lastOnes)).map(arrays=>arrays.reduce(projector, seed));
 }
 class MessageStore {
 	constructor() {
 		this.addressPublicKeys = {}
 		this.nameCache = {}
 		this.address$ = new ReplaySubject(1);
-		var followingMessages$ = this.address$.switchMap(address=>this.getFollowings$(address)).switchMap(followings=>{
-			var observables = followings.map(following=>this.getMessages$(following));
-			return combineLatestOfAll(observables, (all, messagesFromOneFollowing)=>all.concat(messagesFromOneFollowing), []);
-			});
 			var loadDone$ = new Subject();
 		this.messages$ = this.address$.switchMap(address=>{
-			var messages$ = this.getFollowings$(address).switchMap(followings=>{
-			var observables = followings.map(following=>this.getMessages$(following));
-			return combineLatestOfAll(observables, (all, messagesFromOneFollowing)=>all.concat(messagesFromOneFollowing), []);
-			}).combineLatest(this.getMessages$(address), (fromFollowings, addressMessages)=>fromFollowings.concat(addressMessages));
-			messages$.subscribe({complete:()=> loadDone$.next()});
-			return messages$;
+      var followingMessages$ = this.getFollowings$(address).switchMap(followings=>{
+        var observables = [address].concat(followings).map(following=>this.getMessages$(following));
+        return combineLatestOfAll(observables, (all, messagesFromOneFollowing)=>all.concat(messagesFromOneFollowing), []);
+      });
+      var messages$ = followingMessages$.map(messages=>{messages.sort((n1,n2)=>n2.tx.time-n1.tx.time);return messages});
+			messages$ = messages$.share();
+			messages$.combineLatest(Observable.timer(500)).subscribe({complete:m=>loadDone$.next()});
+      return messages$;
 			});
 		this.messagesLoading$ = this.address$.mapTo('started').merge(loadDone$.mapTo('')); 
 	}
 	getPublicKeyOfAddress$(address) {
-		if (this.addressPublicKeys[address]) return Observable.of(this.addressPublicKeys[address]);
-		return this._getPublicKeyOfAddress$(address).do(publicKey=>this.addressPublicKeys[address]=publicKey);
+		if (this.addressPublicKeys[address]) {
+      return Observable.of(this.addressPublicKeys[address]);
+    }
+    return this._getPublicKeyOfAddress$(address).do(publicKey=>{if(publicKey)this.addressPublicKeys[address]=publicKey;});
 	}
 	_getPublicKeyOfAddress$(address) {
 		if (keystore.getAddress()==address) return Observable.of(keystore.getPrivateKey().toPublicKey());
@@ -46,7 +50,7 @@ class MessageStore {
 		}).switchMap(address=>blockchain.getUtxoTxs$(address)).map(utxoTxs=>{
 			var ret = utxoTxs.map(utxo=>transactionEncoder.extractMessagesFromTx(null, utxo.tx)).reduce((accum,array)=>accum.concat(array), []);
 			return ret;
-		}).merge(Observable.of([]));
+		});
 	}
 
 	nameKey() {

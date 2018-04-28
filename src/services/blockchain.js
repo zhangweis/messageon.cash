@@ -6,11 +6,11 @@ import {Observable} from 'rxjs/Observable';
 import * as lodash from 'lodash';
 //import PouchDB from 'pouchdb';
 const backends = [
-//{host:'https://blockdozer.com/insight-api/',address:bchaddrjs.toLegacyAddress},
-{host:'https://cashexplorer.bitcoin.com/api/',
-address:bchaddrjs.toLegacyAddress
-},
-{host:'https://bch-insight.bitpay.com/api/', address:toCashAddress}
+{host:'https://blockdozer.com/insight-api/',address:bchaddrjs.toLegacyAddress},
+{host:'https://cashexplorer.bitcoin.com/api/',address:bchaddrjs.toLegacyAddress},
+{host:'https://bitcoincash.blockexplorer.com/api/',address:bchaddrjs.toLegacyAddress},
+{host:'https://bch-bitcore2.trezor.io/api/',address:bchaddrjs.toLegacyAddress},
+  //{host:'https://bch-insight.bitpay.com/api/', address:toCashAddress}
 ]
   function toCashAddress(address) {     
     return bchaddrjs.toCashAddress(address).split(':')[1];
